@@ -1,0 +1,86 @@
+﻿using Microsoft.JSInterop;
+using NowPlaying.Models;
+using System.Text.Json;
+
+namespace NowPlaying.Services
+{
+    public class FavoritesService(IJSRuntime jsRuntime)
+    {
+        private readonly string _localStorageKey = "favorites";
+        /// <summary>
+        /// Returns a list of movies stored in local storage
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<Movie>> GetFavorites()
+        {
+            List<Movie> movies = [];
+
+            try
+            {
+                var json = await jsRuntime.InvokeAsync<string>("localStorage.getItem", _localStorageKey);
+                movies = JsonSerializer.Deserialize<List<Movie>>(json) ?? [];
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+
+            return movies;
+        }
+
+        /// <summary>
+        /// Save a list of movies to local storage
+        /// </summary>
+        /// <param name="movies">A list of movies</param>
+        /// <returns></returns>
+        public async Task SaveFavorites(List<Movie> movies)
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(movies);
+                await jsRuntime.InvokeVoidAsync("localStorage.setItem", _localStorageKey, json);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+        /// <summary>
+        /// Adds a movie to the local storage
+        /// </summary>
+        /// <param name="movie">A Movie object</param>
+        /// <returns></returns>
+        public async Task AddFavorite(Movie movie)
+        {
+            var currentMovies = await GetFavorites();
+
+            if(currentMovies.All(m => m.Id != movie.Id))
+            {
+                currentMovies.Add(movie);
+                await SaveFavorites(currentMovies);
+            }
+        }
+        /// <summary>
+        /// Removes a movie from local storage
+        /// </summary>
+        /// <param name="movie">A Movie object</param>
+        /// <returns></returns>
+        public async Task RemoveFavorite(Movie movie)
+        {
+            var currentMovies = await GetFavorites();
+            currentMovies = currentMovies.Where(f => f.Id != movie.Id).ToList();
+            await SaveFavorites(currentMovies);
+        }
+        /// <summary>
+        /// Checks if a movie is in the list of favorites
+        /// </summary>
+        /// <param name="id">ID of a movie</param>
+        /// <returns></returns>
+        public async Task<bool> IsFavorite(int id)
+        {
+            var currentMovies = await GetFavorites();
+            bool isFavorite = currentMovies.Any(f => f.Id == id);
+            return isFavorite;
+        }
+    }
+}
