@@ -13,7 +13,7 @@
     @if(popularMovies is null)
     {
         <div class="d-flex justify-content-center align-items-center">
-            if(isLoading)
+            @if(isLoading)
             {
             <h2 class="text-muted">Loading popular playing movies...</h2>
             }
@@ -38,7 +38,7 @@
 
 @code {
     MovieListResponse? popularMovies;
-    bool isLoading = true;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
