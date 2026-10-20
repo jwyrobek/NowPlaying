@@ -1,6 +1,6 @@
 ﻿@page "/movie/{movieId:int}"
 @inject TMDBService TMDBService
-
+@inject IJSRuntime JS
 
 @if(movie is not null)
 {
@@ -55,6 +55,29 @@
                                     @hours hour(s) @minutes minutes
                                 </span>
                             </div>
+                            <div class="hstack gap-2 my-2">
+                                @foreach(var genre in movie.Genres)
+                                {
+                                    <span class="badge text-bg-primary">@genre.Name</span>
+                                }
+                            </div>
+                            <h5 class="lead fw-bold pt-3 mt-3">Overview</h5>
+                            <p>@movie.Overview</p>
+                            <div>
+                                <span id="movie-rating">
+                                    User Score: @((movie.VoteAverage * 10))%
+                                </span>
+                            </div>
+                            @if(!string.IsNullOrEmpty(movieTrailer?.Key))
+                            {
+                                <div id="btn-trailer" class="mt-3">
+                                    <button class="btn btn-outline-warning"
+                                                   data-bs-toggle="modal"
+                                                   data-bs-target="#movie-modal">
+                                        <i class="bi bi-play"></i>Play Trailer
+                                    </button>
+                                </div>
+                            }
                         </div>
                     </div>
                 </div>
@@ -63,6 +86,28 @@
     }
 </div>
 
+<div class="modal" tabindex="-1" id="movie-modal">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content modal-background">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-title">@(movie?.Title ?? "Movie Trailer")</h5>
+                <button type="button" data-bs-dismiss="modal" aria-label="Close" class="ms-auto">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="ratio ratio-16x9">
+                    <iframe id="modal-trailer" src="" allowfullscreen>
+
+                    </iframe>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-warning ms-auto" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 @code {
@@ -71,6 +116,7 @@
     bool isLoading = true;
 
     private MovieDetails? movie;
+    private Video? movieTrailer;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -78,6 +124,7 @@
         {
             isLoading = true;
             movie = await TMDBService.GetMovieById(MovieId);
+            movieTrailer = await TMDBService.GetMovieTrailer(MovieId);
         }
         catch (Exception ex)
         {
@@ -86,6 +133,21 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await using var jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "/Components/Pages/MovieById.razor.js");
+        
+        if  (movieTrailer is not null)
+        {
+            string trailerURL = $"https://www.youtube.com/embed/{movieTrailer.Key}";
+            await jsModule.InvokeVoidAsync("initVideoPlayer", trailerURL);
+        }
+        else
+        {
+            await jsModule.InvokeVoidAsync("initVideoPlayer", string.Empty);
         }
     }
 }
