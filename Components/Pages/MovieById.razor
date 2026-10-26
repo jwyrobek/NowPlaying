@@ -87,7 +87,7 @@
             <div class="card">
                 <div class="card-body">
                     <h3 class="card-title">Top Billed Cast</h3>
-                    <ActorSwiper/>
+                    <ActorSwiper Actors="actors"/>
                 </div>
             </div>
         </div>
@@ -126,6 +126,8 @@
     private MovieDetails? movie;
     private Video? movieTrailer;
 
+    private List<Cast> actors = [];
+
     protected override async Task OnParametersSetAsync()
     {
         try
@@ -133,6 +135,9 @@
             isLoading = true;
             movie = await TMDBService.GetMovieById(MovieId);
             movieTrailer = await TMDBService.GetMovieTrailer(MovieId);
+
+            var credits = await TMDBService.GetMovieCredits(MovieId);
+            actors = credits.Cast;
         }
         catch (Exception ex)
         {
